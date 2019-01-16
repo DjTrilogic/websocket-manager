@@ -1,12 +1,12 @@
-﻿using System;
+﻿using Microsoft.AspNetCore.Http;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Serialization;
+using System;
 using System.IO;
 using System.Net.WebSockets;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.AspNetCore.Http;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Serialization;
 using WebSocketManager.Common;
 
 namespace WebSocketManager
@@ -41,7 +41,7 @@ namespace WebSocketManager
             }
 
             var socket = await context.WebSockets.AcceptWebSocketAsync().ConfigureAwait(false);
-            await _webSocketHandler.OnConnected(socket).ConfigureAwait(false);
+            await _webSocketHandler.OnConnected(socket, context).ConfigureAwait(false);
 
             await Receive(socket, async (result, serializedMessage) =>
             {
@@ -82,8 +82,7 @@ namespace WebSocketManager
                         {
                             result = await socket.ReceiveAsync(buffer, CancellationToken.None).ConfigureAwait(false);
                             ms.Write(buffer.Array, buffer.Offset, result.Count);
-                        }
-                        while (!result.EndOfMessage);
+                        } while (!result.EndOfMessage);
 
                         ms.Seek(0, SeekOrigin.Begin);
 
@@ -101,6 +100,10 @@ namespace WebSocketManager
                     {
                         socket.Abort();
                     }
+                }
+                catch (Exception e)
+                {
+
                 }
             }
 

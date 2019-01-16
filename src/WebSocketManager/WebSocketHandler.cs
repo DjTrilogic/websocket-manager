@@ -1,13 +1,13 @@
-﻿using System;
+﻿using Microsoft.AspNetCore.Http;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Serialization;
+using System;
+using System.Collections.Generic;
 using System.Net.WebSockets;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Reflection;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Serialization;
 using WebSocketManager.Common;
-using System.Collections.Generic;
 
 namespace WebSocketManager
 {
@@ -17,10 +17,8 @@ namespace WebSocketManager
 
         private JsonSerializerSettings _jsonSerializerSettings = new JsonSerializerSettings()
         {
-            ContractResolver = new CamelCasePropertyNamesContractResolver(),
-            TypeNameHandling = TypeNameHandling.All,
-            TypeNameAssemblyFormatHandling = TypeNameAssemblyFormatHandling.Simple,
-            SerializationBinder = new JsonBinderWithoutAssembly()
+            ReferenceLoopHandling = ReferenceLoopHandling.Ignore,
+            ContractResolver = new CamelCasePropertyNamesContractResolver()
         };
 
         /// <summary>
@@ -50,10 +48,11 @@ namespace WebSocketManager
         /// Called when a client has connected to the server.
         /// </summary>
         /// <param name="socket">The web-socket of the client.</param>
+        /// <param name="context">The http context of the socket</param>
         /// <returns>Awaitable Task.</returns>
-        public virtual async Task OnConnected(WebSocket socket)
+        public virtual async Task OnConnected(WebSocket socket, HttpContext context)
         {
-            WebSocketConnectionManager.AddSocket(socket);
+            WebSocketConnectionManager.AddSocket(Guid.NewGuid().ToString(), socket);
 
             await SendMessageAsync(socket, new Message()
             {
@@ -72,9 +71,9 @@ namespace WebSocketManager
             await WebSocketConnectionManager.RemoveSocket(WebSocketConnectionManager.GetId(socket)).ConfigureAwait(false);
         }
 
-        public async Task SendMessageAsync(WebSocket socket, Message message)
+        public virtual async Task SendMessageAsync<TMessage>(WebSocket socket, TMessage message) where TMessage : class
         {
-            if (socket.State != WebSocketState.Open)
+            if (socket == null || socket.State != WebSocketState.Open)
                 return;
 
             var serializedMessage = JsonConvert.SerializeObject(message, _jsonSerializerSettings);
@@ -87,7 +86,7 @@ namespace WebSocketManager
                                    cancellationToken: CancellationToken.None).ConfigureAwait(false);
         }
 
-        public async Task SendMessageAsync(string socketId, Message message)
+        public async Task SendMessageAsync<TMessage>(string socketId, TMessage message) where TMessage : class
         {
             await SendMessageAsync(WebSocketConnectionManager.GetSocketById(socketId), message).ConfigureAwait(false);
         }

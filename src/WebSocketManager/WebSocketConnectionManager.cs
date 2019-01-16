@@ -1,5 +1,4 @@
-﻿using System;
-using System.Collections.Concurrent;
+﻿using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net.WebSockets;
@@ -38,9 +37,9 @@ namespace WebSocketManager
             return _sockets.FirstOrDefault(p => p.Value == socket).Key;
         }
 
-        public void AddSocket(WebSocket socket)
+        public void AddSocket(string id, WebSocket socket)
         {
-            _sockets.TryAdd(CreateConnectionId(), socket);
+            _sockets.TryAdd(id, socket);
         }
 
         public void AddToGroup(string socketID, string groupID)
@@ -77,9 +76,5 @@ namespace WebSocketManager
                                     cancellationToken: CancellationToken.None).ConfigureAwait(false);
         }
 
-        private string CreateConnectionId()
-        {
-            return Guid.NewGuid().ToString();
-        }
     }
 }
